@@ -112,10 +112,10 @@
 
 <script lang="ts" setup>
 
-import { ref, onMounted, onBeforeUnmount, computed } from "vue";
-import type { Entries, ClubClass } from "./components/types";
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import type { Entries } from "./components/types";
 import { clubMetadata, clubThresholds, raidBossList } from "./components/consts";
-import MarkdownRenderer from "./components/MarkdownRenderer.vue";
+// import MarkdownRenderer from "./components/MarkdownRenderer.vue";
 
 // ==================
 // Reactive variables
@@ -173,9 +173,9 @@ function handlePaste(e: ClipboardEvent) {
 }
 
 // futureproofing
-function submitForm() {
-  console.log("Submitting:", lbFormEntries.value);
-}
+// function submitForm() {
+//   console.log("Submitting:", lbFormEntries.value);
+// }
 
 // Clear form button
 function clearForm() {
