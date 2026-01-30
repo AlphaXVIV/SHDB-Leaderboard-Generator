@@ -1,6 +1,6 @@
-# sh-generator
+# Senseihood Leaderboard Generator
 
-This template should help get you started developing with Vue 3 in Vite.
+Leaderboard generator for the Blue Archive club Senseihood
 
 ## Recommended IDE Setup
 
