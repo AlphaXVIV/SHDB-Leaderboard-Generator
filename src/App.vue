@@ -7,8 +7,9 @@
 
     <div class="text-center">
       Copy the following cells from the
-        <a href="https://docs.google.com/spreadsheets/d/1w4-dcMNSNgrxWkUFbgQMKyQfGq3FrceimEqAy-RbBXQ/edit?gid=715673586#gid=715673586" class="link link-info">Google Sheets database</a>
-        <span class="font-bold"> in the same order</span> and simply paste anywhere in the page. <br>
+      <a href="https://docs.google.com/spreadsheets/d/1w4-dcMNSNgrxWkUFbgQMKyQfGq3FrceimEqAy-RbBXQ/edit?gid=715673586#gid=715673586"
+        class="link link-info">Google Sheets database</a>
+      <span class="font-bold"> in the same order</span> and simply paste anywhere in the page. <br>
       Alternatively, you can use the button to paste.<br>
       You can then make corrections in the generated table as needed.
     </div>
@@ -108,9 +109,17 @@
     </div>
 
   </main>
+
+  <footer class="footer footer-center footer-horizontal p-4">415alpha for Senseihood. v0.1.0</footer>
 </template>
 
 <script lang="ts" setup>
+
+// OH DEAR GOD THIS IS A MESS
+// OH DEAR GOD THIS IS A MESS
+// OH DEAR GOD THIS IS A MESS
+// OH DEAR GOD THIS IS A MESS
+// OH DEAR GOD THIS IS A MESS
 
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import type { Entries } from "./components/types";
