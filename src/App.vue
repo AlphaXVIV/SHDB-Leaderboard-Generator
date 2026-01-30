@@ -110,7 +110,7 @@
 
   </main>
 
-  <footer class="footer footer-center footer-horizontal p-4">415alpha for Senseihood. v0.1.0</footer>
+  <footer class="footer footer-center footer-horizontal p-4">415alpha for Senseihood. v0.1.0a</footer>
 </template>
 
 <script lang="ts" setup>
