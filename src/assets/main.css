@@ -1,28 +1,33 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "daisyui";
 
 /* Load Noto Fonts */
-html, body {
-    font-family: 'Noto Sans Variable', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+html,
+body {
+  font-family: 'Noto Sans Variable', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 /* Center all content
 A CSS Developer's favorite thing to do... */
 
 body {
-    margin: 20px 100px;
-    height: 100vh; /* full viewport height */
-    display: flex;
-    justify-content: center; /* horizontal center */
-    /* align-items: center; */
+  margin: 0 100px;
+  height: 100vh; /* full viewport height */
+  display: flex;
+  justify-content: center; /* horizontal center */
+  /* align-items: center; */
+}
+
+#app {
+  padding: 20px 0;
 }
 
 th {
-    padding-inline: 8px;
-    padding-block: 4px;
+  padding-inline: 8px;
+  padding-block: 4px;
 }
 
 td {
-    padding-inline: 4px;
-    padding-block: 4px;
+  padding-inline: 4px;
+  padding-block: 4px;
 }
