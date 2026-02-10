@@ -37,3 +37,7 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Google API Secret Keys
+.DO_NOT_INCLUDE
+credentials.json
