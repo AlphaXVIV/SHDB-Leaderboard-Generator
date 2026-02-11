@@ -5,19 +5,23 @@
 
   <main class="flex flex-col gap-5">
 
+    <transition enter-active-class="transition ease-out duration-100" enter-from-class="opacity-0 translate-y-2"
+      enter-to-class="opacity-100 translate-y-0" leave-active-class="transition ease-in duration-100"
+      leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 translate-y-2">
+      <div v-if="feedback" class="absolute top-8 left-1/2 -translate-x-1/2 z-50 alert"
+        :class="feedback.type === 'success' ? 'alert-success' : 'alert-error'">
+        <span>{{ feedback.message }}</span>
+      </div>
+    </transition>
+
     <div class="text-center">
-      Copy the following cells from the
-      <a href="https://docs.google.com/spreadsheets/d/1w4-dcMNSNgrxWkUFbgQMKyQfGq3FrceimEqAy-RbBXQ/edit?gid=715673586#gid=715673586"
-        class="link link-info">Google Sheets database</a>
-      <span class="font-bold"> in the same order</span> and simply paste anywhere in the page. <br>
-      Alternatively, you can use the button to paste.<br>
-      You can then make corrections in the generated table as needed.
+      Make sure you fill the form below first
     </div>
 
     <div class="grid grid-cols-5 gap-2.5">
-      <label class="input" for="clubNumber">
+      <label class="input" for="club">
         <span class="label">Club #</span>
-        <input type="number" name="clubNumber" id="clubNumber" v-model="clubNumber" value="1" min="1" max="11" required>
+        <input type="number" name="club" id="club" v-model="club" value="1" min="1" max="11" required>
       </label>
 
       <!-- <label for="raid">TA/GA: </label> -->
@@ -49,11 +53,16 @@
     </div>
 
     <div class="flex justify-center gap-2.5 h-15">
-      <button class="btn h-full">Paste</button>
-      <button class="btn h-full">Generate Images (Coming Soon)</button>
-      <button v-on:click="generateMessage" class="btn h-full">Generate Discord Message<br>(will also sort before
+      <!-- <button class="btn h-full">Paste</button>
+      <button class="btn h-full">Generate Images (Coming Soon)</button> -->
+      <button @click="bGenerateMessage" class="btn h-full">Generate Discord Message<br>(will also sort before
         generating)</button>
-      <button v-on:click="clearForm" class="btn h-full">Clear</button>
+      <!-- <button @click="bCsvCache" class="btn h-full">Cache CSV</button>
+      <button @click="bFillForm" class="btn h-full">Fill Form from Cache</button> -->
+      <button @click="bFetch" class="btn h-full">Fetch</button>
+      <!-- <button @click="bClearForm" class="btn h-full">Clear Form</button>
+      <button @click="bClearCache" class="btn h-full">Clear Cache</button> -->
+      <button @click="bClearBoth" class="btn h-full">Clear</button>
     </div>
 
     <!-- Debug elements for copy-paste function -->
@@ -72,7 +81,7 @@
             <tr>
               <th class="">Friend ID</th>
               <th class="">Name</th>
-              <th v-on:click="sortRank" class="">Rank<br>(click to sort)</th>
+              <th @click="sortRank(lbFormEntries)" class="">Rank<br>(click to sort)</th>
               <th class="">Student Rep<br>(optional, currently unused)</th>
               <th class="">New<br>member?</th>
             </tr>
@@ -110,20 +119,21 @@
 
   </main>
 
-  <footer class="footer footer-center footer-horizontal p-4">415alpha for Senseihood. v0.1.0a</footer>
+  <footer class="footer footer-center footer-horizontal p-4">415alpha for Senseihood. v0.2.0a</footer>
 </template>
 
 <script lang="ts" setup>
 
 // OH DEAR GOD THIS IS A MESS
-// OH DEAR GOD THIS IS A MESS
-// OH DEAR GOD THIS IS A MESS
-// OH DEAR GOD THIS IS A MESS
-// OH DEAR GOD THIS IS A MESS
 
-import { ref, onMounted, onBeforeUnmount } from "vue";
-import type { Entries } from "./components/types";
-import { clubMetadata, clubThresholds, raidBossList } from "./components/consts";
+import { ref } from "vue";
+
+import type { Entries, ProtoLeaderboard } from "./components/types";
+import { raidBossList } from "./components/consts";
+
+import { useClipboard } from "./composables/pasteHandler";
+import { sortRank, generateMessage } from "./composables/buttonFunctions";
+import { csvFetch } from "./composables/csvFetch";
 // import MarkdownRenderer from "./components/MarkdownRenderer.vue";
 
 // ==================
@@ -134,179 +144,173 @@ const lbFormEntries = ref<Entries[]>([]);
 // const rawPaste = ref("");
 // const jsonPaste = ref("");
 const generatedMessage = ref<string>("");
-const clubNumber = ref<number>();
-const raidType = ref<string>("");
-const season = ref<number>();
+const club = ref<number>(1);
+const raidType = ref<string>("TA");
+const season = ref<number>(1);
 const raidBoss = ref<string>("");
 const environment = ref<string>("");
 
-// =============
-// Paste handler
-// =============
-function handlePaste(e: ClipboardEvent) {
-  e.preventDefault();
+// Feedback for dialog box
+const feedback = ref<{ type: string, message: string | unknown } | null>(null)
 
-  // Get clipboard text
-  const clipboardData = e.clipboardData;
-  const clipboardPaste = clipboardData?.getData("text/plain") || "";
+// Initialize functions
+// useClipboard(lbFormEntries)
 
-  // rawPaste.value = escapeWhitespace(clipboardPaste);
-
-  // const textarea = document.getElementById("debugPaste") as HTMLTextAreaElement;
-  // if (textarea) {
-  //   textarea.value = clipboardData?.getData("text/plain") || "";
-  // }
-
-  // Split by rows (entries)
-  // Google Sheets uses \n for new rows
-  const rows = clipboardPaste?.trim().split("\n") || [];
-
-  // Process each row
-  lbFormEntries.value = rows.map(row => {
-
-    // Google Sheets uses tab-delimited values
-    const cols = row.split("\t");
-    // Handle #N/A for rank
-    if (cols[2] === "#N/A") { cols[2] = "-DNF-" }
-
-    return {
-      friend_code: cols[0] || "",
-      name: cols[1] || "",
-      rank: Number(cols[2]) || 99999,
-      student_rep: cols[3] || "",
-      is_new: !!(cols[4]?.trim())
-    };
-  });
-
-  // jsonPaste.value = JSON.stringify(lbFormEntries.value, null, 2);
+/**
+ * Function wrapper for generateMessage button
+ */
+function bGenerateMessage(): void {
+  generateMessage(lbFormEntries, generatedMessage, club, raidType, season, raidBoss, environment)
 }
+
+/**
+ * Function wrapper for csvCache button; This only caches the fetched and processed CSV and puts it into storage.
+ */
+async function bCsvCache(): Promise<void> {
+  try {
+    // Try if the fetch is successful in the first place
+    const protoLeaderboard = await csvFetch(raidType, season)
+
+    // Clear cache if successful
+    localStorage.clear()
+
+    // Set cache to a "prototype Leaderboard"
+    localStorage.setItem("protoLeaderboard", JSON.stringify(protoLeaderboard))
+
+    // Further checks if it got something, as well as popping up alert boxes
+    const cProtoLeaderboard = localStorage.getItem("protoLeaderboard")
+    if (cProtoLeaderboard) {
+      const oProtoLeaderboard = JSON.parse(cProtoLeaderboard)
+      console.log("If this works, here's a slice: ", oProtoLeaderboard.slice(1, 10))
+      feedback.value = { type: "success", message: "CSV fetch successfully cached!" }
+    }
+
+    // this is probably redundant lool
+    else {
+      console.log("Cache missing!")
+      feedback.value = { type: "error", message: "Cache missing!" }
+    }
+  }
+  catch (err) {
+    console.log(err)
+    feedback.value = { type: "error", message: err }
+  }
+
+  setTimeout(() => (feedback.value = null), 3000)
+}
+
+/**
+ * Function wrapper for csvCache button; This only caches the fetched and processed CSV and puts it into storage.
+ */
+async function bFillForm(): Promise<void> {
+  const cProtoLeaderboard = localStorage.getItem("protoLeaderboard")
+
+  if (!cProtoLeaderboard) {
+    feedback.value = { type: "error", message: "Cache missing! Fetch CSV first" }
+    return
+  }
+
+  // This also shouldn't happen unless you erase the club form
+  if (!club.value) {
+    feedback.value = { type: "error", message: "Club is undefined! Define Club No. first" }
+    return
+  }
+
+  const oProtoLeaderboard: ProtoLeaderboard[] = JSON.parse(cProtoLeaderboard)
+  const clubLeaderboard = oProtoLeaderboard.filter(entry => entry.club === club.value)
+
+  lbFormEntries.value = clubLeaderboard.map((entry) => {
+    return {
+      friend_code: entry.friend_code || '',
+      name: entry.name || '',
+      rank: entry.rank || 99999,
+      student_rep: '', // Currently unavailable
+      is_new: false, // currently unavailable
+    }
+  })
+}
+
+
+/**
+ * Function wrapper for bFetch button; This does both bCsvCache and bFillForm
+ */
+async function bFetch(): Promise<void> {
+
+  // Does everything bCsvCache already does
+  // There is a bit of a funny where the cached results aren't deleted and it still generates the form, whatever it's funnier that way
+  await bCsvCache()
+
+  const cProtoLeaderboard = localStorage.getItem("protoLeaderboard")
+
+  // This shouldn't happen because bCsvCache will cancel everything if it fails to run
+  if (!cProtoLeaderboard) {
+    feedback.value = { type: "error", message: "Cache missing! Fetch CSV first" }
+    return
+  }
+
+  // This also shouldn't happen unless you erase the club form
+  if (!club.value) {
+    feedback.value = { type: "error", message: "Club is undefined! Define Club No. first" }
+    return
+  }
+
+  const oProtoLeaderboard: ProtoLeaderboard[] = JSON.parse(cProtoLeaderboard)
+  const clubLeaderboard = oProtoLeaderboard.filter(entry => entry.club === club.value)
+  console.log("DEBUG FILTERED ClubLB:", clubLeaderboard)
+
+  lbFormEntries.value = clubLeaderboard.map((entry) => {
+    return {
+      friend_code: entry.friend_code || '',
+      name: entry.name || '',
+      rank: entry.rank || 99999,
+      student_rep: '', // Currently unavailable
+      is_new: false, // currently unavailable
+    }
+  })
+
+  setTimeout(() => (feedback.value = null), 3000)
+}
+
 
 // futureproofing
 // function submitForm() {
 //   console.log("Submitting:", lbFormEntries.value);
 // }
 
-// Clear form button
-function clearForm() {
+/**
+ * Clears form
+ */
+function bClearForm() {
   lbFormEntries.value = [];
   generatedMessage.value = "";
-  clubNumber.value = 1;
-  raidType.value = "";
+  club.value = 1;
+  raidType.value = "TA";
   season.value = 1;
   raidBoss.value = "";
   environment.value = "";
 }
 
-// ================
-// Sort rank button
-// ================
-function sortRank() {
-  lbFormEntries.value.sort((a, b) => {
-    if (a === null && b === null) return 0;
-    if (a.rank === null) return 1;
-    if (b.rank === null) return -1;
-
-    return a.rank - b.rank;
-  });
+/**
+ * Clears cache on-demand
+ */
+function bClearCache() {
+  localStorage.clear()
+  if (localStorage.length === 0) { feedback.value = { type: 'success', message: 'Cache cleared!' } }
+  setTimeout(() => (feedback.value = null), 3000)
 }
 
-function splitTop5(leaderboard: Entries[]): [Entries[], Entries[]] {
-  const top5 = leaderboard.slice(0, 5); // Top 5
-  const minusTop5 = leaderboard.slice(5);  // Everyone else
-  return [top5, minusTop5];
+/**
+ * Clears both cache and form
+ */
+function bClearBoth() {
+  bClearForm()
+  bClearCache()
 }
 
-// ===============================
-// Generate Discord message button
-// ===============================
-function generateMessage() {
 
-  let message = "";
-  let clubSelected = clubMetadata.get(clubNumber.value || 1);
-
-  // Button will sort by rank "automatically" using an existing function
-  // This may reflect the form order as well (this is intended)
-  sortRank();
-
-  // Slice the leaderboards into separate parts: Top 5, Platinum, Gold, Warning
-  const [top5, minusTop5Lb] = splitTop5(lbFormEntries.value);
-  const platinum = minusTop5Lb.filter((entry) => entry.rank !== null && entry.rank <= 10000)
-  const gold = minusTop5Lb.filter((entry) => entry.rank !== null && entry.rank > 10000 && entry.rank <= clubThresholds.get(clubSelected!.class)!)
-  const warning = minusTop5Lb.filter((entry) => entry.rank === null || entry.rank > clubThresholds.get(clubSelected!.class)!)
-
-  // PENDING: Make a warning popup or some shit
-  if (!clubSelected) {
-    clubSelected = clubMetadata.get(1)!;
-  }
-
-  // Message Header - Club
-  message += `# <@&${clubSelected.roleID}> Leaderboard\n`;
-
-  // Message Header - Raid
-  message += `## ${raidType.value} S${season.value} ${raidBoss.value} ${environment.value}\n`;
-
-  // Platinum Rank (Top 10000)
-  message += `### :1_: **Plat Trophy** :1_:\n`;
-  top5.forEach(entry => {
-    // Output: **`  415` 「SH」415a**
-    message += `**\`${entry.rank.toString().padStart(5, " ")}\` ${entry.name}**`;
-    if (entry.is_new) {
-      message += ` :wave:`;
-    }
-
-    message += `\n`;
-  });
-
-  platinum.forEach(entry => {
-    // Output: `  415` 「SH」415a
-    message += `\`${entry.rank.toString().padStart(5, " ")}\` ${entry.name}`;
-    if (entry.is_new) {
-      message += ` :wave:`;
-    }
-
-    message += `\n`;
-  });
-
-  // Gold Rank (10000 - Threshold)
-  // Does not pop up in Competitive
-  if (gold.length > 0) {
-    message += `### :2_: **Gold Trophy** :2_:\n`;
-    gold.forEach(entry => {
-
-      // Output: `10415` 「SH」415a
-      message += `\`${entry.rank.toString().padStart(5, " ")}\` ${entry.name}`;
-      if (entry.is_new) {
-        message += ` :wave:`;
-      }
-
-      message += `\n`;
-    });
-  }
-
-  // Danger Zone (Below Threshold)
-  message += `### :rotating_light: **Warning** :rotating_light:\n`;
-  warning.forEach(entry => {
-
-    // Output: `99999` 「SH」415a
-    message += `\`${entry.rank.toString().padStart(5, " ")}\` ${entry.name}`;
-
-    message += `\n`;
-  });
-
-  // Set generated message
-  generatedMessage.value = message;
-
-  // Update textarea
-  const textarea = document.getElementById("discordMessage") as HTMLTextAreaElement;
-  if (textarea) {
-    textarea.value = generatedMessage.value;
-  }
-
-  // Copy to clipboard
-  navigator.clipboard.writeText(textarea.value)
-}
-
-// Clipboard copy function
+/**
+ * Simple function to copy to clipboard
+ */
 const copyToClipboard = async (): Promise<void> => {
   try {
     await navigator.clipboard.writeText(generatedMessage.value)
@@ -321,13 +325,5 @@ const copyToClipboard = async (): Promise<void> => {
     console.error('Failed to copy:', (err as Error).message)
   }
 }
-// Listeners
-onMounted(() => {
-  window.addEventListener("paste", handlePaste);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("paste", handlePaste);
-});
 
 </script>
